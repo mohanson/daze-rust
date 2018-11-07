@@ -1,0 +1,8 @@
+[package]
+name = "daze-rust"
+version = "0.1.0"
+authors = ["mohanson <mohanson@outlook.com>"]
+
+[dependencies]
+md5 = "0.6"
+rust-crypto = "0.2"
