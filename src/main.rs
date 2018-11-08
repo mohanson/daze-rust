@@ -88,7 +88,7 @@ fn daze(mut src_stream: TcpStream) {
 
 fn main() {
     let listener = TcpListener::bind(C_LISTEN).unwrap();
-    println!("Listen and server on {}", C_CIPHER);
+    println!("Listen and server on {}", C_LISTEN);
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
         thread::spawn(move || daze(stream));
