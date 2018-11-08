@@ -2,14 +2,13 @@ extern crate crypto;
 extern crate md5;
 
 use crypto::rc4::Rc4;
+use crypto::symmetriccipher::SynchronousStreamCipher;
 use std::error::Error;
 use std::io::prelude::*;
 use std::net::Shutdown;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
-
-use crypto::symmetriccipher::SynchronousStreamCipher;
 
 static C_LISTEN: &str = "0.0.0.0:51958";
 static C_CIPHER: &str = "daze";
@@ -36,13 +35,11 @@ fn daze(mut src_stream: TcpStream) {
     let mut cipher_a = Rc4::new(&buf);
     let mut cipher_b = Rc4::new(&buf);
     let mut buf: Vec<u8> = vec![0; 12];
-    if let Err(err) = read(&mut src_stream, &mut cipher_a, &mut buf) {
-        println!("{}", err);
+    if read(&mut src_stream, &mut cipher_a, &mut buf).is_err() {
         return;
     };
     let mut buf: Vec<u8> = vec![0; buf[11] as usize];
-    if let Err(err) = read(&mut src_stream, &mut cipher_a, &mut buf) {
-        println!("{}", err);
+    if read(&mut src_stream, &mut cipher_a, &mut buf).is_err() {
         return;
     };
     let dst = String::from_utf8(buf).unwrap();
