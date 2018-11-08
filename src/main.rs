@@ -29,7 +29,9 @@ fn read(stream: &mut TcpStream, c: &mut Rc4, buf: &mut [u8]) -> Result<usize, Bo
 
 fn daze(mut src_stream: TcpStream) {
     let mut buf: Vec<u8> = vec![0; 128];
-    src_stream.read(&mut buf).unwrap();
+    if src_stream.read(&mut buf).is_err() {
+        return;
+    }
     let mut raw: Vec<u8> = md5::compute(C_CIPHER).0.iter().cloned().collect();
     buf.append(&mut raw);
     let mut cipher_a = Rc4::new(&buf);
