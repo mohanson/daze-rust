@@ -6,6 +6,7 @@ use std::error::Error;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
+use std::time;
 
 use crypto::symmetriccipher::SynchronousStreamCipher;
 
@@ -52,33 +53,38 @@ fn daze(mut stream: TcpStream) {
         return;
     };
     let dst = String::from_utf8(buf).unwrap();
+    println!("Connect {}", dst);
 
     let mut dst_stream = TcpStream::connect(&dst).unwrap();
     let mut t_stream = stream.try_clone().unwrap();
     let mut t_dst_stream = dst_stream.try_clone().unwrap();
 
     thread::spawn(move || loop {
-        let mut buf: Vec<u8> = vec![0; 128];
+        let mut buf: Vec<u8> = vec![0; 32*1024];
         match read(&mut t_stream, &mut c, &mut buf) {
             Ok(data) => {
-                if let Err(err) = &t_dst_stream.write(&buf) {
+                if let Err(err) = &t_dst_stream.write(&buf[..data]) {
                     break;
                 }
+                continue;
             }
             Err(err) => break,
         }
+        thread::sleep(time::Duration::from_secs(1));
     });
 
-    let mut buf: Vec<u8> = vec![0; 128];
+    let mut buf: Vec<u8> = vec![0; 32*1024];
     loop {
         match read(&mut dst_stream, &mut z, &mut buf) {
             Ok(data) => {
-                if let Err(err) = stream.write(&buf) {
+                if let Err(err) = stream.write(&buf[..data]) {
                     break;
                 }
+                continue;
             }
             Err(err) => break,
         }
+        thread::sleep(time::Duration::from_secs(1));
     }
 }
 
