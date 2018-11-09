@@ -1,6 +1,9 @@
+extern crate byteorder;
 extern crate crypto;
 extern crate md5;
 
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
 use std::error::Error;
@@ -9,16 +12,11 @@ use std::net::Shutdown;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 static C_LISTEN: &str = "0.0.0.0:51958";
 static C_CIPHER: &str = "daze";
-
-// fn read_exact(stream: &mut TcpStream, c: &mut Rc4, buf: &mut [u8]) -> Result<(), Box<Error>> {
-//     let mut src = vec![0; buf.len()];
-//     stream.read_exact(&mut src)?;
-//     c.process(&src, buf);
-//     Ok(())
-// }
 
 fn read(stream: &mut TcpStream, c: &mut Rc4, buf: &mut [u8]) -> Result<usize, Box<Error>> {
     let mut src = vec![0; buf.len()];
@@ -38,6 +36,20 @@ fn daze(mut src_stream: TcpStream) {
     let mut cipher_b = Rc4::new(&buf);
     let mut buf: Vec<u8> = vec![0; 12];
     if read(&mut src_stream, &mut cipher_a, &mut buf).is_err() {
+        return;
+    };
+    if buf[0] != 0xFF || buf[1] != 0xFF {
+        println!("daze: malformed request: {:?}", &buf[..2]);
+        return;
+    };
+    let pit = BigEndian::read_u64(&buf[2..10]);
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let c = if now > pit { now - pit } else { pit - now };
+    if c > 120 {
+        println!("daze: time span is too large: {}", c);
         return;
     };
     let mut buf: Vec<u8> = vec![0; buf[11] as usize];
