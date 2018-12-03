@@ -1,36 +1,35 @@
+extern crate argparse;
 extern crate byteorder;
 extern crate crypto;
 extern crate md5;
 
-use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
-use std::error::Error;
+use std::error;
 use std::io::prelude::*;
-use std::net::Shutdown;
-use std::net::TcpListener;
-use std::net::TcpStream;
+use std::net;
+use std::sync;
 use std::thread;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
+use std::time;
 
-static C_LISTEN: &str = "0.0.0.0:51958";
-static C_CIPHER: &str = "daze";
-
-fn read(stream: &mut TcpStream, c: &mut Rc4, buf: &mut [u8]) -> Result<usize, Box<Error>> {
+fn read(
+    stream: &mut net::TcpStream,
+    c: &mut Rc4,
+    buf: &mut [u8],
+) -> Result<usize, Box<error::Error>> {
     let mut src = vec![0; buf.len()];
     let n = stream.read(&mut src)?;
     c.process(&src[..n], &mut buf[..n]);
     Ok(n)
 }
 
-fn daze(mut src_stream: TcpStream) {
+fn daze(mut src_stream: net::TcpStream, k: &str) {
     let mut buf: Vec<u8> = vec![0; 128];
     if src_stream.read(&mut buf).is_err() {
         return;
     }
-    let mut raw: Vec<u8> = md5::compute(C_CIPHER).0.iter().cloned().collect();
+    let mut raw: Vec<u8> = md5::compute(k).0.iter().cloned().collect();
     buf.append(&mut raw);
     let mut cipher_a = Rc4::new(&buf);
     let mut cipher_b = Rc4::new(&buf);
@@ -42,9 +41,9 @@ fn daze(mut src_stream: TcpStream) {
         println!("daze: malformed request: {:?}", &buf[..2]);
         return;
     };
-    let pit = BigEndian::read_u64(&buf[2..10]);
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
+    let pit = byteorder::BigEndian::read_u64(&buf[2..10]);
+    let now = time::SystemTime::now()
+        .duration_since(time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
     let c = if now > pit { now - pit } else { pit - now };
@@ -59,7 +58,7 @@ fn daze(mut src_stream: TcpStream) {
     let dst = String::from_utf8(buf).unwrap();
     println!("Connect {}", dst);
 
-    let mut dst_stream = TcpStream::connect(&dst).unwrap();
+    let mut dst_stream = net::TcpStream::connect(&dst).unwrap();
     let mut src_stream_copy = src_stream.try_clone().unwrap();
     let mut dst_stream_copy = dst_stream.try_clone().unwrap();
     thread::spawn(move || {
@@ -76,8 +75,8 @@ fn daze(mut src_stream: TcpStream) {
                 break;
             };
         }
-        src_stream_copy.shutdown(Shutdown::Both).unwrap();
-        dst_stream_copy.shutdown(Shutdown::Both).unwrap();
+        src_stream_copy.shutdown(net::Shutdown::Both).unwrap();
+        dst_stream_copy.shutdown(net::Shutdown::Both).unwrap();
     });
 
     let mut buf: Vec<u8> = vec![0; 32 * 1024];
@@ -93,15 +92,30 @@ fn daze(mut src_stream: TcpStream) {
             break;
         };
     }
-    dst_stream.shutdown(Shutdown::Both).unwrap();
-    src_stream.shutdown(Shutdown::Both).unwrap();
+    dst_stream.shutdown(net::Shutdown::Both).unwrap();
+    src_stream.shutdown(net::Shutdown::Both).unwrap();
 }
 
 fn main() {
-    let listener = TcpListener::bind(C_LISTEN).unwrap();
-    println!("Listen and server on {}", C_LISTEN);
+    let mut c_listen = String::from("127.0.0.1:51958");
+    let mut c_cipher = String::from("daze");
+
+    {
+        let mut ap = argparse::ArgumentParser::new();
+        ap.set_description("Start daze server");
+        ap.refer(&mut c_listen)
+            .add_option(&["-l"], argparse::Store, "listen address");
+        ap.refer(&mut c_cipher)
+            .add_option(&["-k"], argparse::Store, "cipher, for encryption");
+        ap.parse_args_or_exit();
+    }
+
+    println!("Listen and server on {}", c_listen);
+    let listener = net::TcpListener::bind(&c_listen[..]).unwrap();
+    let c_cipher = sync::Arc::new(c_cipher);
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
-        thread::spawn(move || daze(stream));
+        let c_cipher = c_cipher.clone();
+        thread::spawn(move || daze(stream, &c_cipher[..]));
     }
 }

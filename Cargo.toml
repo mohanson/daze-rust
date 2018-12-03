@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["mohanson <mohanson@outlook.com>"]
 
 [dependencies]
+argparse = "0.2"
+byteorder = "1.2"
 md5 = "0.6"
 rust-crypto = "0.2"
-byteorder = "1.2"
