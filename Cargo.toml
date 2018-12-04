@@ -1,5 +1,5 @@
 [package]
-name = "daze-rust"
+name = "daze"
 version = "0.1.0"
 authors = ["mohanson <mohanson@outlook.com>"]
 
@@ -7,4 +7,4 @@ authors = ["mohanson <mohanson@outlook.com>"]
 argparse = "0.2"
 byteorder = "1.2"
 md5 = "0.6"
-rust-crypto = "0.2"
+rc4 = { git = "https://github.com/mohanson/rust-rc4" }
