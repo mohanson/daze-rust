@@ -76,7 +76,7 @@ fn main() {
     println!("Listen and server on {}", c_listen);
     let listener = net::TcpListener::bind(&c_listen[..]).unwrap();
     for stream in listener.incoming() {
-        let mut stream = stream.unwrap();
+        let stream = stream.unwrap();
         let cipher = cipher.clone();
         thread::spawn(move || hand(stream, cipher.as_slice()));
     }
