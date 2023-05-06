@@ -2,10 +2,9 @@
 name = "daze"
 version = "0.1.0"
 authors = ["mohanson <mohanson@outlook.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 argparse = "0.2"
-byteorder = "1.2"
-md5 = "0.6"
-rc4 = { git = "https://github.com/rsdump/rc4" }
+md5 = "0.7"
+rc4 = { git = "https://github.com/rsdump/rc4", tag = "v0.1.0" }
